@@ -24,33 +24,33 @@ ytrain=np.append(ytrain*4, ytrain*9)
 y_holdout = np.ones((499,1))
 y_holdout = np.append(y_holdout*4, y_holdout*9)
 
-
-clf = svm.SVC(C=1., kernel='linear')
-clf.fit(training, ytrain)
-
-
-
-
-
-
-
-Clist=range(2,2,1)
+Clist=range(-5,-4,1)
 C=[]
 for element in Clist:
     C.append(math.exp(float(element)))
 
 Pe=[]
 machines = []
-for c in C:
-    clf = svm.SVC(C=c, kernel='poly', degree=1)
-    clf.fit(training, ytrain)
-    Pe.append(1 - clf.score(holdout, y_holdout))
-    machines.append(clf)
+# for c in C:
+#     clf = svm.SVC(C=c, kernel='poly', degree=1)
+#     clf.fit(training, ytrain)
+#     Pe.append(1 - clf.score(holdout, y_holdout))
+#     machines.append(clf)
 
-best_score= min(Pe)
+gamma = [.1, 10000]
+for c in C:
+    for g in gamma:
+        clf = svm.SVC(C=c, kernel='rbf', degree=1, gamma=g)
+        clf.fit(training, ytrain)
+        Pe.append(1 - clf.score(holdout, y_holdout))
+        machines.append(clf)
+
+best_score = min(Pe)
 best_C = C[Pe.index(best_score)]
+bestgamma = gamma[Pe.index(best_score)]
 best_machine = machines[Pe.index(best_score)]
 a=best_machine.decision_function(total)
+print('The best parameters are C={C} and gamma={g} with an error probability of {p} using {t} support vectors'.format(C=best_C, p=best_score, t=len(best_machine.support_), g=bestgamma))
 misclassified = []
 for index, element in enumerate(a):
     if ytotal[index] == 4.:
@@ -59,27 +59,32 @@ for index, element in enumerate(a):
     elif ytotal[index] == 9.:
         if element < 0:
             misclassified.append([index, abs(element)])
+
     else:
         1
 
-if misclassified == []:
+if not misclassified:
     worst16_values = heapq.nsmallest(16, a)
+    worst16_cutoff = max(worst16_values)
+    worst16 = misclassified[misclassified[:,1] < worst16_cutoff]
 else:
-    worst16_values = heapq.nlargest(16, misclassified[:,2])
+    misclassified = np.array(misclassified)
+    worst16_values = heapq.nlargest(16, misclassified[:,1])
+    worst16_cutoff = min(worst16_values)
+    worst16 = misclassified[misclassified[:,1] > worst16_cutoff]
 
-worst16 = []
-for index, element in enumerate(worst16_values):
-    worst16.append(a.tolist().index(element))
 
 f, axarr = plt.subplots(4, 4)
 for i in range(0,15):
-    j = worst16[i]
-    axarr[(i/4), i%4].imshow(x[j].reshape((28,28)), cmap='gray')
-    axarr[i/4, i%4].set_title('{label}'.format(label=int(ytotal[j])))
-
+    j = worst16[i,0]
+    r=i+1
+    axarr[(i/4), i % 4].imshow(total[j].reshape((28,28)), cmap='gray')
+    axarr[i/4, i % 4].set_title('{label}'.format(label=int(ytotal[j])))
+print('The best parameters are C={C} and gamma={g} with an error probability of {p} using {t} support vectors'.format(C=best_C, p=best_score, t=len(best_machine.support_, g=bestgamma)))
 plt.show()
 
-print('The best C is {C} with an error probability of {p}'.format(C=best_C, p=best_score))
+1
+
 
 # plt.title('The {j}th image is a {label}'.format(j=j, label=int(y[j])))
 # plt.imshow(x[j].reshape((28,28)), cmap='gray')
